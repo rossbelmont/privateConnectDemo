@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
 
-# vpc ID
+# VPC ID
   CustomerVPCId:
     Type: String
     Description: 'Enter the VPC Id to create resources in.'
@@ -13,12 +13,10 @@ Parameters:
   PrivateSubnetId2:
     Type: String
     Description: 'Enter the second private subnet Id'
-# SF IAM Prinicpal ARN
+# SF IAM Principal ARN
   SFSrcArn:
     Type: String
     Description: Enter the Salesforce IAM ARN.
-# 
-#
 
 Resources:
 
@@ -55,7 +53,6 @@ Resources:
       ToPort: 65535
     DependsOn: SFPrvConnectALBSecGrp
 
-
   #SecurityGroup-for ALB
   SFPrvConnectALBSecGrp:
     Type: AWS::EC2::SecurityGroup
@@ -91,15 +88,16 @@ Resources:
         - 'x86_64'
       Code: 
         ZipFile: |
-          import random
+          # <import libs here>
           def handler(event, context):
-            randomNum = random.random()
+            #<insert code here>
+            message = 'Success from AWS!!'
             return {
                   "statusCode": 200,
                   "headers": {
                       "Content-Type": "application/json"
                   },
-                  "randomNumber": randomNum
+                  "body": message
                   }
       Description: 'SF PrivateConnect demo lambda function'
       FunctionName: 'SFPrvConnectLambdaFx'
@@ -111,9 +109,9 @@ Resources:
       Timeout: 30
     DependsOn: SFPrvConnectLambdaRole
 
-  # Before you register a Lambda function as a target, you must create a 
-  # AWS::Lambda::Permission resource that grants the Elastic Load Balancing
-  # service principal permission to invoke the Lambda function.
+  # Before you register a Lambda function as a target, you must create an
+  # AWS::Lambda::Permission resource that grants the Elastic Load Balancing service 
+  # principal permission to invoke the Lambda function.
 
   #LambdaPermissions
   SFPrvConnectLambdaPerms:
@@ -123,7 +121,8 @@ Resources:
       FunctionName: !GetAtt SFPrvConnectLambdaFx.Arn
       Principal: 'elasticloadbalancing.amazonaws.com'
       SourceAccount: !Ref 'AWS::AccountId'
-    DependsOn: SFPrvConnectALBTgtGrp
+    DependsOn: 
+      - SFPrvConnectLambdaFx
 
   #ALB listener on port 80 forwarding to ALB target grp
   SFPrvConnectALBListener:
@@ -159,7 +158,10 @@ Resources:
       Targets: 
         - Id: !GetAtt SFPrvConnectLambdaFx.Arn
       TargetType: 'lambda'
-    DependsOn: SFPrvConnectLambdaALB
+    DependsOn: 
+      - SFPrvConnectLambdaALB
+      - SFPrvConnectLambdaFx
+      - SFPrvConnectLambdaPerms
 
   #NLB-TargetGroup - routes traffic to an ALB
   SFPrvConnectNLBTgtGrp:
@@ -174,7 +176,7 @@ Resources:
           Port: 80
       TargetType: 'alb'
       VpcId: !Ref CustomerVPCId
-    DependsOn: SFPrvConnectNLB
+    DependsOn: SFPrvConnectNLB # probably should include SFPrvConnectLambdaALB
 
   #NLB
   SFPrvConnectNLB:
@@ -207,7 +209,6 @@ Resources:
       Type: 'application'
     DependsOn: SFPrvConnectALBSecGrp
 
-
   #VPC-Endpoint
   SFPrvConnectVPCE:
     Type: AWS::EC2::VPCEndpointService
@@ -216,8 +217,6 @@ Resources:
       NetworkLoadBalancerArns: 
         - !Ref SFPrvConnectNLB
     DependsOn: SFPrvConnectNLB
-
-
 
 Outputs:
 
