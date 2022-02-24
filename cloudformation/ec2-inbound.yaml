@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+# vpc ID
+  CustomerVPCId:
+    Type: String
+    Description: 'Enter the VPC Id to create resources in.'
+# Private subnets to host resources
+  PrivateSubnetId1:
+    Type: String
+    Description: 'Enter the first private subnet Id'
+  PrivateSubnetId2:
+    Type: String
+    Description: 'Enter the second private subnet Id'
+# SF IAM Prinicpal ARN
+  SFSrcArn:
+    Type: String
+    Description: Enter the Salesforce IAM ARN.
+# 
+#
+
+Resources:
+
+  #VPC endpoint service permissions
+  SFPrvConnectVPCEPerms:
+    Type: AWS::EC2::VPCEndpointServicePermissions
+    Properties: 
+      AllowedPrincipals: 
+      - !Ref SFSrcArn
+      ServiceId: !Ref SFPrvConnectVPCE
+    DependsOn: SFPrvConnectVPCE
+
+  #SecurityGroup-ingress rules
+  SFPrvConnectALBSecGrpIngressRules:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SFPrvConnectALBSecGrp
+      CidrIp: '0.0.0.0/0'
+      Description: 'Allow inbound http traffic from IP any'
+      FromPort: 80
+      IpProtocol: 'tcp'
+      ToPort: 80
+    DependsOn: SFPrvConnectALBSecGrp
+
+  #SecurityGroup-egress rules
+  SFPrvConnectALBSecGrpEgressRules:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref SFPrvConnectALBSecGrp
+      CidrIp: '0.0.0.0/0'
+      Description: 'Allows all outbound traffic'
+      FromPort: 1
+      IpProtocol: '-1'
+      ToPort: 65535
+    DependsOn: SFPrvConnectALBSecGrp
+
+
+  #SecurityGroup-for ALB
+  SFPrvConnectALBSecGrp:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: 'SG attached to private connect ALB. allows http traffic.'
+      GroupName: 'prvConnect-alb-sg'
+      VpcId: 
+        !Ref CustomerVPCId
+
+  
+  #ALB listener on port 80 forwarding to ALB target grp
+  SFPrvConnectALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - TargetGroupArn: !Ref SFPrvConnectALBTgtGrp
+          Type: 'forward'
+      LoadBalancerArn: !Ref SFPrvConnectEC2ALB
+      Port: 80
+      Protocol: 'HTTP'
+    DependsOn: SFPrvConnectALBTgtGrp
+
+  #NLB listener on port 80 forwarding to NLB target grp
+  SFPrvConnectNLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - TargetGroupArn: !Ref SFPrvConnectNLBTgtGrp
+          Type: 'forward'
+      LoadBalancerArn: !Ref SFPrvConnectNLB
+      Port: 80
+      Protocol: 'TCP'
+    DependsOn: SFPrvConnectNLBTgtGrp
+
+  #ALB-TargetGroup - routes traffic to EC2
+  SFPrvConnectALBTgtGrp:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      HealthCheckEnabled: 'true'
+      IpAddressType: 'ipv4'
+      Name: 'SFPrvConnectALBTgtGrp'
+      Port: 80
+      Protocol: 'HTTP'
+      TargetType: 'ip'
+      VpcId: !Ref CustomerVPCId
+    DependsOn: SFPrvConnectEC2ALB
+
+  #NLB-TargetGroup - routes traffic to an ALB
+  SFPrvConnectNLBTgtGrp:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      IpAddressType: 'ipv4'
+      Name: 'SFPrvConnectNLBTgtGrp'
+      Port: 80
+      Protocol: 'TCP'
+      Targets: 
+        - Id: !Ref SFPrvConnectEC2ALB
+          Port: 80
+      TargetType: 'alb'
+      VpcId: !Ref CustomerVPCId
+    DependsOn: SFPrvConnectNLB
+
+  #NLB
+  SFPrvConnectNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: 'ipv4'
+      LoadBalancerAttributes: 
+        - Key: load_balancing.cross_zone.enabled
+          Value: 'true'
+      Name: 'SFPrivateConnect-demo-nlb'
+      Scheme: 'internal'
+      Subnets: 
+        - !Ref PrivateSubnetId1
+        - !Ref PrivateSubnetId2
+      Type: 'network'
+
+
+  #ALB-EC2
+  SFPrvConnectEC2ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: 'ipv4'
+      SecurityGroups:
+        - Fn::GetAtt: SFPrvConnectALBSecGrp.GroupId
+      Name: 'SFPrivateConnect-demo-alb'
+      Scheme: 'internal'
+      Subnets: 
+        - !Ref PrivateSubnetId1
+        - !Ref PrivateSubnetId2
+      Type: 'application'
+    DependsOn: SFPrvConnectALBSecGrp
+
+
+  #VPC-Endpoint
+  SFPrvConnectVPCE:
+    Type: AWS::EC2::VPCEndpointService
+    Properties: 
+      AcceptanceRequired: 'false'
+      NetworkLoadBalancerArns: 
+        - !Ref SFPrvConnectNLB
+    DependsOn: SFPrvConnectNLB
+
+
+
+Outputs:
+
+  SFVPCEndpointID: 
+    Description: "The privateLink VPC endpoint service ID"
+    Value: !Ref SFPrvConnectVPCE
+
+  SFNLBDNSName:
+    Description: 'URL for the Network Load Balancer assigned to the VPC endpoint.'
+    Value: !GetAtt SFPrvConnectNLB.DNSName
+
