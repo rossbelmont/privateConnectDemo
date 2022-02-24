@@ -111,7 +111,9 @@ Resources:
       Timeout: 30
     DependsOn: SFPrvConnectLambdaRole
 
-  # Before you register a Lambda function as a target, you must create a AWS::Lambda::Permission resource that grants the Elastic Load Balancing service principal permission to invoke the Lambda function.
+  # Before you register a Lambda function as a target, you must create a 
+  # AWS::Lambda::Permission resource that grants the Elastic Load Balancing
+  # service principal permission to invoke the Lambda function.
 
   #LambdaPermissions
   SFPrvConnectLambdaPerms:
