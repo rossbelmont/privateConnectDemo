@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OutboundNetworkConnection xmlns="http://soap.sforce.com/2006/04/metadata">
+    <connectionType>AwsPrivateLink</connectionType>
+    <description>Private Connect demo Feb 24, 2022 (2)</description>
+    <isActive>true</isActive>
+    <label>privateConnectDemo2022022402</label>
+    <outboundNetworkConnProperties>
+        <propertyName>Region</propertyName>
+        <propertyValue>us-west-2</propertyValue>
+    </outboundNetworkConnProperties>
+    <outboundNetworkConnProperties>
+        <propertyName>AwsVpcEndpointId</propertyName>
+        <propertyValue>vpce-021ae6584f5c67334</propertyValue>
+    </outboundNetworkConnProperties>
+    <outboundNetworkConnProperties>
+        <propertyName>AwsVpcEndpointServiceName</propertyName>
+        <propertyValue>com.amazonaws.vpce.us-west-2.vpce-svc-017cdfb76559fee8c</propertyValue>
+    </outboundNetworkConnProperties>
+    <status>Ready</status>
+</OutboundNetworkConnection>
