@@ -1,0 +1,4 @@
+# Sample data for Leads
+This demo works with Lead records, so this directory contains sample Lead data that can be imported into a Salesforce org to show more examples.
+
+This data can also be used with Amazon AppFlow to show an example of inbound Private Connect. [AppFlow can create and provision Private Connect directly from its own setup UI](https://aws.amazon.com/about-aws/whats-new/2020/07/amazon-appflow-supports-private-data-transfers-between-aws-salesforce/), as long as the target org contains Private Connect licenses. To line up with this demo story, create a Flow inside AppFlow that inserts Lead data into Salesforce from S3. The files here can be uploaded to S3, and the outbound portion of the demo can assign a rating to these new fictitious Leads.
