@@ -88,16 +88,16 @@ Resources:
         - 'x86_64'
       Code: 
         ZipFile: |
-          # <import libs here>
+          import random
+          import json
           def handler(event, context):
-            #<insert code here>
-            message = 'Success from AWS!!'
+            randomNum = random.random()
             return {
                   "statusCode": 200,
                   "headers": {
                       "Content-Type": "application/json"
                   },
-                  "body": message
+                  "body": json.dumps(randomNum)
                   }
       Description: 'SF PrivateConnect demo lambda function'
       FunctionName: 'SFPrvConnectLambdaFx'
